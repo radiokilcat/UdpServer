@@ -1,49 +1,69 @@
 #ifndef SERVER_H
 #define SERVER_H
 
-#include <boost/asio/ip/tcp.hpp>
+#include <ctime>
+#include <iostream>
+#include <string>
+#include <boost/array.hpp>
+#include <boost/bind.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/asio.hpp>
 
-//#include "concurrent.hpp"
-//#include "utility/memory.hpp"
-//#include "speed_counter.hpp"
-//#include "utility/types.hpp"
+using boost::asio::ip::udp;
 
-class http_server_connection;
-
-class http_server
+std::string make_daytime_string()
 {
+  using namespace std; // For time_t, time and ctime;
+  time_t now = time(0);
+  return ctime(&now);
+}
 
+class udp_server
+{
 public:
-
-//    using handler_connection = std::function<void(boost::system::error_code, std::shared_ptr<http_server_connection>)>;
-
-//    static std::shared_ptr<http_server> create(strand_ptr strand, handler_connection handle);
-
-//    void start(const std::string& host, port_t port, handler_type handle);
-//    void close();
-
-//    bool remove_connection(uintptr_t id);
-
-//    void speed(speed_callback handler) const;
+  udp_server(boost::asio::io_service& io_service)
+    : socket_(io_service, udp::endpoint(udp::v4(), 8001))
+  {
+    start_receive();
+  }
 
 private:
+  void start_receive()
+  {
+    socket_.async_receive_from(
+        boost::asio::buffer(recv_buffer_), remote_endpoint_,
+        boost::bind(&udp_server::handle_receive, this,
+          boost::asio::placeholders::error,
+          boost::asio::placeholders::bytes_transferred));
+  }
 
-//    http_server(strand_ptr strand, handler_connection handle);
+  void handle_receive(const boost::system::error_code& error,
+      std::size_t /*bytes_transferred*/)
+  {
+    if (!error || error == boost::asio::error::message_size)
+    {
+      boost::shared_ptr<std::string> message(
+          new std::string(make_daytime_string()));
 
-//    void async_accept();
-//    void add_connection(const std::shared_ptr<http_server_connection>& server_connection);
+      socket_.async_send_to(boost::asio::buffer(*message), remote_endpoint_,
+          boost::bind(&udp_server::handle_send, this, message,
+            boost::asio::placeholders::error,
+            boost::asio::placeholders::bytes_transferred));
 
-//    boost::asio::ip::tcp::resolver resolver_;
-//    boost::asio::ip::tcp::acceptor acceptor_;
+      start_receive();
+    }
+  }
 
-//    handler_connection handle_connection_;
+  void handle_send(boost::shared_ptr<std::string> /*message*/,
+      const boost::system::error_code& /*error*/,
+      std::size_t /*bytes_transferred*/)
+  {
+  }
 
-//    speed_counter speed_counter_;
-
-//    strand_pool strand_pool_;
-
-//    mutable std::mutex mutex_;
-//    std::map<uintptr_t, std::shared_ptr<http_server_connection>> connection_map_;
+  udp::socket socket_;
+  udp::endpoint remote_endpoint_;
+  boost::array<char, 1> recv_buffer_;
 };
 
 #endif // SERVER_H
+
