@@ -9,25 +9,22 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/asio.hpp>
 
-using boost::asio::ip::udp;
+#include "writer.h"
+
+using namespace boost::asio;
 
 class udp_server
 {
 public:
-//  udp_server(boost::asio::io_context& io_context);
+  udp_server(ip::udp::socket socket);
 
-//private:
-//  void start_receive();
-//  void handle_receive(const boost::system::error_code& error,
-//      std::size_t /*bytes_transferred*/);
-//  void handle_send(boost::shared_ptr<std::string> /*message*/,
-//      const boost::system::error_code& /*error*/,
-//      std::size_t /*bytes_transferred*/);
-//  void handle(udp::socket& socket);
-
-//  udp::socket socket_;
-//  udp::endpoint remote_endpoint_;
-//  boost::array<char, 1> recv_buffer_;
+private:
+  void async_read();
+  void async_write();
+  ip::udp::socket socket_;
+  ip::udp::endpoint remote_endpoint_;
+  char data_[1500 + 1];
+  Writer packet_writer_;
 };
 
 #endif // SERVER_H
